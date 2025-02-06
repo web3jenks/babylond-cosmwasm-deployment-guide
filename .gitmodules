@@ -1,0 +1,6 @@
+[submodule "storage-contract"]
+	path = storage-contract
+	url = https://github.com/babylonlabs-io/storage-contract.git
+[submodule "babylon"]
+	path = babylon
+	url = https://github.com/babylonlabs-io/babylon.git
