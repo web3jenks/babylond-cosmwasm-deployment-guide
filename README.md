@@ -1,4 +1,4 @@
-# Comprehensive Babylon Smart Contract Deployment Guide
+# Babylon Smart Contract Deployment Guide
 
 ## Introduction
 This guide walks you through deploying a smart contract on the Babylon blockchain. The example contract we'll deploy is a storage contract that allows saving data with Bitcoin timestamps and verifying Bitcoin finalization status.
