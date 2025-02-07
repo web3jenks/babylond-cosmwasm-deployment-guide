@@ -87,6 +87,11 @@ This command:
 Verify the wallet:
 ```bash
 babylond keys list --keyring-backend=test
+# Expected output: 
+- address: bbn1y7h7nmxpwlfuj8m72qa0uwc8nqflzgragve5zv
+  name: test-key
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Aw48YzsPg4bPhToeAfBM/sIL+nmgi7oxPjJ8sQXVl0lW"}'
+  type: local
 ```
 
 #### Fund Your Wallet
@@ -95,7 +100,7 @@ You need test tokens (tBBN) to deploy contracts. Get them through:
 L2Scan Babylon testnet Faucet:
 1. Visit [L2Scan Faucet](https://babylon-testnet.l2scan.co/faucet)
 2. Create an account
-3. Request test tokens
+3. Request test tokens with wallet you just created above
 
 
 Verify your balance:
