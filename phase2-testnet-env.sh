@@ -1,8 +1,7 @@
 homeDir="$HOME/.babylond" \
 chainId="bbn-test-5" \
 feeToken="ubbn" \
-key="test-key" \
-keyringBackend="--keyring-backend=test" \
+key="phase2-test-key" \
 nodeUrl="https://babylon-testnet-rpc.nodes.guru" \
 apiUrl="https://babylon-testnet-api.nodes.guru"
 

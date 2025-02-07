@@ -1,220 +1,248 @@
-# Babylon Smart Contract Deployment Guide
+# Comprehensive Babylon Smart Contract Deployment Guide
+
+## Introduction
+This guide walks you through deploying a smart contract on the Babylon blockchain. The example contract we'll deploy is a storage contract that allows saving data with Bitcoin timestamps and verifying Bitcoin finalization status.
 
 ## Prerequisites
 
-In order to deploy the smart contract, you need to have the following installed on your machine:
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Docker](https://docs.docker.com/get-docker/)
+Before starting, ensure you have installed:
+- [Rust](https://www.rust-lang.org/tools/install) - Required for building the CosmWASM contract and CLI tool
+- [Docker](https://docs.docker.com/get-docker/) - Used for contract optimization
 
-## Deployment
+## Detailed Deployment Steps
 
-### Step 1: Clone the repository
+### 1. Repository Setup
+First, clone the repository containing the Babylon smart contract code. The repository includes submodules for Babylon core and contract dependencies.
 
-### Step 2: Update submodules
-This project included two git submodules and points to the Babylon and Babylon-contracts repositories.
-
+Update the submodules:
 ```bash
-$ git submodule update --init --recursive
+git submodule update --init --recursive
 ```
-Complete this before preoceeding to the next step.
+This command initializes and fetches all necessary submodule code: `babyon` binary and `storage_contract`. 
 
-### Step 3: Build and install babylond cli tool
+### 2. Babylond CLI Installation
+The Babylond CLI is your primary tool for interacting with the Babylon blockchain.
 
-Ensure you have rust installed: 
-
+Verify your Rust installation first:
 ```bash
-$ rustc --version
-rustc 1.81.0 (2dbb1af80 2024-08-20)
-```
-
-Build and install babylond cli tool
-
-```bash
-$ cd babylon
-$ make install
+rustc --version
+# Expected output similar to: rustc 1.81.0 (2dbb1af80 2024-08-20)
 ```
 
-Verify the installation by running:
-
+Build and install the CLI:
 ```bash
-$ babylond version
+cd babylon
+make install
+```
+
+Verify the installation:
+```bash
+babylond version
+# Should output a version hash similar to the follwoing: 
 main-112821536b0ada40aa29e34b53206f56c61bf631
 ```
 
-### Step 4: Create a new wallet
+### 3. Wallet Management
 
-Using the `keys add` command, we can create a new wallet and store it in the system keyring. The `--keyring-backend=test` flag is used to specify that we would like to use the test keyring that is stored in the babylond home directory. 
-
+#### Create a New Wallet
+Create a test wallet using the local keyring:
 ```bash
-$ babylond keys add test-key --keyring-backend=test
-- address: <your-wallet-address>
-  name: test-key
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"<your-wallet-address-public-key>"}'
-  type: local
-
-...
+babylond keys add test-key --keyring-backend=test
 ```
-Where `test-key` is the name of the wallet that will be created.
+This command:
+- Creates a new key pair
+- Stores it in the test keyring
+- Outputs the address and recovery phrase
+- IMPORTANT: Save the mnemonic phrase securely for recovery
 
-Store your  mnemonic phrase in case you need to import it again via `--restore` method. 
-
-Verify by using the `keys list` command:
-
+Verify the wallet:
 ```bash
-$ babylond keys list
-- name: test-key
-  type: local
-  address: <your-wallet-address>
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"<your-wallet-address-public-key>"}'
+babylond keys list --keyring-backend=test
 ```
 
-Fund your wallet using [L2Sacn faucet](https://babylon-testnet.l2scan.co/faucet). Simply create account and claim tbbn.
+#### Fund Your Wallet
+You need test tokens (tBBN) to deploy contracts. Get them through:
 
-Or use following command to get 10 bbn:
+Option 1: L2Scan Faucet
+1. Visit [L2Scan Faucet](https://babylon-testnet.l2scan.co/faucet)
+2. Create an account
+3. Request test tokens
 
+Option 2: Command Line
 ```bash
-curl https://faucet.testnet.babylonlabs.io/claim -H "Content-Type: multipart/form-data" -d '{"address":"<your-wallet-address>"}'
-
-{"coin":{"denom":"ubbn","amount":"10000000"},"transactionHash":"1C3ED4A9392F9445C7408A2DD3652E04E37F48B0F864FE95E646FF1BC3DBA086","toAddresses":["<your-wallet-address>"]}
+curl https://faucet.testnet.babylonlabs.io/claim \
+-H "Content-Type: multipart/form-data" \
+-d "{\"address\":\"$(babylond keys show $key -a --keyring-backend=test)\"}"
 ```
 
-Check if your balance is updates: 
-
+Verify your balance:
 ```bash
-babylond q bank balances <your-wallet-address> --node=$nodeUrl
+babylond query bank balances $(babylond keys show $key -a --keyring-backend=test) --node=$nodeUrl
+```
+Expected output should show some tBBN tokens.
 
-balances:
-- amount: "10000000"
-  denom: ubbn
-pagination:
-  total: "1"
+### 4. Environment Configuration
+
+Load network-specific variables:
+```bash
+# For Phase 2 testnet (Babylon chain)
+source env-phase2-testnet.sh
+
+# OR for Phase 3 devnet (multi-staking)
+source env-phase3-devnet.sh
 ```
 
-This endpoint is rate limited to 1 request per day per wallet. 
+These files set crucial variables:
+- `$homeDir`: Babylond configuration directory
+- `$chainId`: Network identifier
+- `$feeToken`: Token used for transaction fees
+- `$key`: Your wallet name
+- `$nodeUrl`: RPC endpoint
+- `$apiUrl`: REST API endpoint
 
-### Step 5: Load the environment variables into your shell
-
-For Babylon Phase 2 testnet (Babylon chain), please use the `env-phase2-testnet.sh` file. For Phase 3 devnet (multi-staking), please use the `env-phase3-devnet.sh` file.
-
+Verify the configuration:
 ```bash
-$ source env-phase2-testnet.sh
+echo $homeDir, $chainId, $feeToken, $key, $nodeUrl, $apiUrl
 ```
 
-check if the environment variables are loaded correctly:
+### 5. Contract Building
 
-```bash
-$ echo $homeDir, $chainId, $feeToken, $key, $keyringBackend, $nodeUrl, $apiUrl
-/Users/usr/.babylond, euphrates-0.5.0, ubbn, test-key, --keyring-backend=test, https://rpc-euphrates.devnet.babylonlabs.io, https://lcd-euphrates.devnet.babylonlabs.io
-```
-
-### Step 6: Build the smart contract
-
-Babylon storage contract is stored in the `storage-contract` directory. It is a demo contract which enables saving arbitrary data into Babylon with bitcoin timestamped, and checking
-whether data is Bitcoin finalized.
-
-Ensures your docker is runing: 
-
+#### Verify Docker
+The build process uses Docker for consistent environments:
 ```bash
 docker run hello-world
 ```
 
-Yous hould see a message displaying: 
-
-```
-Hello from Docker!
-This message shows that your installation appears to be working correctly.
-```
-
-Build the contract using cargo run-script optimizer. This will result in a optimized wasm file built in the artifacts directory.
-
+#### Build Contract
+Navigate to the contract directory and build:
 ```bash
 cd storage-contract
 cargo run-script optimize
 ```
+This creates an optimized WASM file in the `artifacts` directory.
 
-You should see similar output:
+### 6. Contract Deployment Process
 
-```bash
-1.73.0-aarch64-unknown-linux-musl (default)
-cargo 1.73.0 (9c4383fb5 2023-08-26)
-Building project /code ...
-    Updating git repository `https://github.com/babylonlabs-io/bindings`
-    Finished release [optimized] target(s) in 0.98s
-Optimizing artifacts ...
-Optimizing storage_contract-aarch64.wasm ...
-Post-processing artifacts...
-5dd97a8c3876a0467f48d3b6dae541796b59c64296b51fb32ca25cfb06c1bff3  storage_contract-aarch64.wasm
-done
-Finished, status of exit status: 0
-```
-
-Check the artifacts directory:
-
-```bash
-$ ls artifacts
-checksums.txt storage_contract-aarch64.wasm
-```
-
-### Step 7: Store contract data on Babylon chain
-
-Before we deploy the contract, we need to store the optimized wasm file to Babylon chain using `tx wasm store` command: 
-
+#### Step 1: Store Contract Code
+Upload the WASM file to the blockchain:
 ```bash
 babylond tx wasm store ./artifacts/storage_contract-aarch64.wasm \
 --from=$key \
---gas=auto --gas-prices=1$feeToken --gas-adjustment=1.3 \
---chain-id=“$chainId” \
--b=sync --yes $keyringBackend \
+--gas=auto \
+--gas-prices=1$feeToken \
+--gas-adjustment=1.3 \
+--chain-id="$chainId" \
+-b=sync \
+--yes \
+--keyring-backend=test \
 --log_format=json \
 --home=$homeDir \
 --node=$nodeUrl
 ```
 
-You should see similar output:
+Key parameters explained:
+- `--gas=auto`: Automatically estimates required gas
+- `--gas-adjustment=1.3`: Adds 30% to estimated gas for safety
+- `-b=sync`: Waits for transaction to be broadcast
+- `--yes`: Automatically confirms the transaction
 
+#### Step 2: Get Contract Code ID
+After storing, get the unique code identifier:
 ```bash
-gas estimate: 1687290
-code: 4
-codespace: sdk
-data: ""
-events: []
-gas_used: "0"
-gas_wanted: "0"
-height: "0"
-info: ""
-logs: []
-raw_log: 'signature verification failed; please verify account number (187667) and
-  chain-id (bbn-test-5): (unable to verify single signer signature): unauthorized'
-timestamp: ""
-tx: null
-txhash: 2B00B5DF4DAD1E22BF8D1A6098E68830A767D5BD491765E1BB5FFD551B905CA0
-```
-
-The txhash is the hash of the transaction. You can use it to query the transaction status:
-
-```bash
-babylond q tx 2B00B5DF4DAD1E22BF8D1A6098E68830A767D5BD491765E1BB5FFD551B905CA0 --node=$nodeUrl
-```
-
-Or visit testnet chain explorer to check the transaction status [L2Scan Transaction Explorer](https://babylon-testnet.l2scan.co/txs/).
-
-Once the transaction is confirmed, a codeID will be returned to identity the loaded contract. 
-
-```bash
-babylond q wasm list-code \
+codeID=$(babylond query wasm list-code \
 --node $nodeUrl \
--o json | \
-jq --arg ADDR "<your-wallet-address>" '.code_infos[] | select(.code_id == "1") | .code_id'
+-o json \
+| jq \
+--arg ADDR "$(babylond keys show $key -a --keyring-backend=test)" \
+'.code_infos[] | select(.creator==$ADDR).code_id | tonumber')
+```
+This command filters contracts against your wallet address to find the one you just uploaded.
+
+#### Step 3: Instantiate Contract
+Create a new instance of the contrac using `tx wasm instantiate` command:
+```bash
+babylond tx wasm instantiate $codeID '{}' \
+--from=$key \
+--no-admin \
+--label="storage_contract" \
+--gas=auto \
+--gas-prices=1$feeToken \
+--gas-adjustment=1.3 \
+--chain-id="$chainId" \
+-b=sync \
+--yes \
+--keyring-backend=test \
+--log_format=json \
+--home=$homeDir \
+--node=$nodeUrl
 ```
 
-### Step 8: Initialize the contract
+Parameters explained:
+- `'{}'`: Empty initialization parameters for the storage_contract
+- `--no-admin`: Creates contract without admin privileges
+- `--label`: Human-readable identifier
 
+Get the contract's address and store it in a variable:
+```bash
+contractAddress=$(babylond query wasm list-contract-by-code $codeID \
+--node=$nodeUrl \
+-o json \
+| jq -r '.contracts[0]')
+```
 
+### 7. Contract Interaction
 
+#### Save Data
+To store data in the contract using `tx wasm execute` command:
+```bash
+# Your data to store
+data="This is example plain-text data"
 
+# Convert to hex format (required by contract)
+hexData=$(echo -n "$data" | xxd -ps -c0)
 
+# Create the execution message for the save_data function
+executeMsg="{\"save_data\":{\"data\":\"$hexData\"}}"
 
+# Send transaction via `tx wasm execute` command
+babylond tx wasm execute $contractAddress "$executeMsg" \
+--from=$key \
+--gas=auto \
+--gas-prices=1$feeToken \
+--gas-adjustment=1.3 \
+--chain-id="$chainId" \
+-b=sync \
+--yes \
+--keyring-backend=test \
+--log_format=json \
+--home=$homeDir \
+--node=$nodeUrl
+```
 
+#### Query Data
+To retrieve stored data using `query wasm contract` command:
+```bash
+# Create hash of original data for verification
+hashedData=$(echo -n "$data" | sha256sum | cut -f1 -d' ')
 
+# Prepare query message
+quer
+```
 
+As a reault you should see the following output with data store and finalized status and btc_timestamp information: 
+
+```bash
+{
+  "data": {
+    "finalized": false,
+    "latest_finalized_epoch": "644",
+    "data": {
+      "data": "54686973206973206578616d706c6520706c61696e2d746578742064617461",
+      "btc_height": "234328",
+      "btc_timestamp": "1738908922",
+      "saved_at_btc_epoch": "658"
+    }
+  }
+}
+```
 
