@@ -14,19 +14,20 @@ Before starting, ensure you have installed:
 ### 1. Repository Setup
 First, clone the repository containing the Babylon smart contract code. The repository includes submodules for Babylon core and contract dependencies.
 
-Update the submodules:
+Clone and update the submodules: 
 ```bash
 git submodule update --init --recursive
 ```
-This command initializes and fetches all necessary submodule code: `babyon` binary and `storage_contract`. 
+This command initializes and fetches all necessary submodule code: `babyon` binary and `storage_contract`. It might take a few minutes to complete as close to 1GB of data will be downloaded.
 
 ### 2. Babylond CLI Installation
 The Babylond CLI is your primary tool for interacting with the Babylon blockchain.
 
 Verify your Rust installation first:
 ```bash
-rustc --version
-# Expected output similar to: rustc 1.81.0 (2dbb1af80 2024-08-20)
+cargo --version
+# Expected output similar to: 
+cargo 1.84.1 (66221abde 2024-11-19)
 ```
 
 Build and install the CLI:
@@ -38,50 +39,11 @@ make install
 Verify the installation:
 ```bash
 babylond version
-# Should output a version hash similar to the follwoing: 
+# Should output a version hash similar to: 
 main-112821536b0ada40aa29e34b53206f56c61bf631
 ```
 
-### 3. Wallet Management
-
-#### Create a New Wallet
-Create a test wallet using the local keyring:
-```bash
-babylond keys add test-key --keyring-backend=test
-```
-This command:
-- Creates a new key pair
-- Stores it in the test keyring
-- Outputs the address and recovery phrase
-- IMPORTANT: Save the mnemonic phrase securely for recovery
-
-Verify the wallet:
-```bash
-babylond keys list --keyring-backend=test
-```
-
-#### Fund Your Wallet
-You need test tokens (tBBN) to deploy contracts. Get them through:
-
-Option 1: L2Scan Faucet
-1. Visit [L2Scan Faucet](https://babylon-testnet.l2scan.co/faucet)
-2. Create an account
-3. Request test tokens
-
-Option 2: Command Line
-```bash
-curl https://faucet.testnet.babylonlabs.io/claim \
--H "Content-Type: multipart/form-data" \
--d "{\"address\":\"$(babylond keys show $key -a --keyring-backend=test)\"}"
-```
-
-Verify your balance:
-```bash
-babylond query bank balances $(babylond keys show $key -a --keyring-backend=test) --node=$nodeUrl
-```
-Expected output should show some tBBN tokens.
-
-### 4. Environment Configuration
+### 3. Environment Configuration
 
 Load network-specific variables:
 ```bash
@@ -103,7 +65,45 @@ These files set crucial variables:
 Verify the configuration:
 ```bash
 echo $homeDir, $chainId, $feeToken, $key, $nodeUrl, $apiUrl
+
+# Expected output: 
+/Users/<your_username>/.babylond, bbn-test-5, ubbn, test-key, https://babylon-testnet-rpc.nodes.guru, https://babylon-testnet-api.nodes.guru
 ```
+
+
+### 4. Wallet Management
+
+#### Create a New Wallet
+Create a test wallet using the local keyring:
+```bash
+babylond keys add test-key --keyring-backend=test
+```
+This command:
+- Creates a new key pair named `test-key`
+- Stores it in the test keyring
+- Outputs the address and recovery phrase
+- IMPORTANT: Save the mnemonic phrase securely for recovery using `--restore` command
+
+Verify the wallet:
+```bash
+babylond keys list --keyring-backend=test
+```
+
+#### Fund Your Wallet
+You need test tokens (tBBN) to deploy contracts. Get them through:
+
+L2Scan Babylon testnet Faucet:
+1. Visit [L2Scan Faucet](https://babylon-testnet.l2scan.co/faucet)
+2. Create an account
+3. Request test tokens
+
+
+Verify your balance:
+```bash
+babylond query bank balances $(babylond keys show $key -a --keyring-backend=test) --node=$nodeUrl
+```
+Expected output should show some tBBN tokens.
+
 
 ### 5. Contract Building
 
@@ -129,7 +129,7 @@ Upload the WASM file to the blockchain:
 babylond tx wasm store ./artifacts/storage_contract-aarch64.wasm \
 --from=$key \
 --gas=auto \
---gas-prices=1$feeToken \
+--gas-prices=0.002$feeToken \
 --gas-adjustment=1.3 \
 --chain-id="$chainId" \
 -b=sync \
@@ -142,7 +142,8 @@ babylond tx wasm store ./artifacts/storage_contract-aarch64.wasm \
 
 Key parameters explained:
 - `--gas=auto`: Automatically estimates required gas
-- `--gas-adjustment=1.3`: Adds 30% to estimated gas for safety
+- `--gas-prices=0.002$feeToken`: Sets the gas price to `gas = autoCalculation x 0.002ubbn`
+- `--gas-adjustment=1.3`: Adds 30% to estimated gas for safety so `gas = autoCalculation x 0.002ubbn x 1.3`
 - `-b=sync`: Waits for transaction to be broadcast
 - `--yes`: Automatically confirms the transaction
 
@@ -167,7 +168,7 @@ babylond tx wasm instantiate $codeID '{}' \
 --no-admin \
 --label="storage_contract" \
 --gas=auto \
---gas-prices=1$feeToken \
+--gas-prices=0.002$feeToken \
 --gas-adjustment=1.3 \
 --chain-id="$chainId" \
 -b=sync \
@@ -209,7 +210,7 @@ executeMsg="{\"save_data\":{\"data\":\"$hexData\"}}"
 babylond tx wasm execute $contractAddress "$executeMsg" \
 --from=$key \
 --gas=auto \
---gas-prices=1$feeToken \
+--gas-prices=0.002$feeToken \
 --gas-adjustment=1.3 \
 --chain-id="$chainId" \
 -b=sync \
