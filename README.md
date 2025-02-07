@@ -148,6 +148,7 @@ Key parameters explained:
 
 #### Step 2: Get Contract Code ID
 After storing, get the unique code identifier:
+
 ```bash
 codeID=$(babylond query wasm list-code \
 --node $nodeUrl \
