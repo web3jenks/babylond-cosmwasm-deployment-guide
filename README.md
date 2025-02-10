@@ -48,10 +48,10 @@ main-112821536b0ada40aa29e34b53206f56c61bf631
 Load network-specific variables:
 ```bash
 # For Phase 2 testnet (Babylon chain)
-source env-phase2-testnet.sh
+source phase2-testnet-env.sh
 
 # OR for Phase 3 devnet (multi-staking)
-source env-phase3-devnet.sh
+source phase3-devnet-env.sh
 ```
 
 These files set crucial variables:
