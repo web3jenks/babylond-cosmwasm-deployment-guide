@@ -154,12 +154,6 @@ This command filters contracts against your wallet address to find the one you j
 Create a new instance of the contrac using `tx wasm instantiate` command:
 ```bash
 babylond tx wasm instantiate $codeID '{}' --from=$key --no-admin --label="storage_contract" --gas=auto --gas-prices=0.002$feeToken --gas-adjustment=1.3 --chain-id="$chainId" -b=sync --yes --keyring-backend=test --log_format=json --home=$homeDir --node=$nodeUrl
--b=sync \
---yes \
---keyring-backend=test \
---log_format=json \
---home=$homeDir \
---node=$nodeUrl
 ```
 
 Parameters explained:
