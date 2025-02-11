@@ -8,6 +8,7 @@ This guide walks you through deploying a smart contract on the Babylon blockchai
 Before starting, ensure you have installed:
 - [Rust](https://www.rust-lang.org/tools/install) - Required for building the CosmWASM contract and CLI tool
 - [Docker](https://docs.docker.com/get-docker/) - Used for contract optimization
+- [jq](https://stedolan.github.io/jq/download/) - Used for JSON parsing
 
 ## Detailed Deployment Steps
 
@@ -131,18 +132,7 @@ This creates an optimized WASM file in the `artifacts` directory.
 #### Step 1: Store Contract Code
 Upload the WASM file to the blockchain:
 ```bash
-babylond tx wasm store ./artifacts/storage_contract-aarch64.wasm \
---from=$key \
---gas=auto \
---gas-prices=0.002$feeToken \
---gas-adjustment=1.3 \
---chain-id="$chainId" \
--b=sync \
---yes \
---keyring-backend=test \
---log_format=json \
---home=$homeDir \
---node=$nodeUrl
+babylond tx wasm store ./artifacts/storage_contract-aarch64.wasm --from=$key --gas=auto --gas-prices=0.002$feeToken --gas-adjustment=1.3 --chain-id="$chainId" -b=sync --yes --keyring-backend=test --log_format=json --home=$homeDir --node=$nodeUrl
 ```
 
 Key parameters explained:
@@ -156,26 +146,14 @@ Key parameters explained:
 After storing, get the unique code identifier:
 
 ```bash
-codeID=$(babylond query wasm list-code \
---node $nodeUrl \
--o json \
-| jq \
---arg ADDR "$(babylond keys show $key -a --keyring-backend=test)" \
-'.code_infos[] | select(.creator==$ADDR).code_id | tonumber')
+codeID=$(babylond query wasm list-code --node $nodeUrl -o json | jq --arg ADDR "$(babylond keys show $key -a --keyring-backend=test)" '.code_infos[] | select(.creator==$ADDR).code_id | tonumber')
 ```
 This command filters contracts against your wallet address to find the one you just uploaded.
 
 #### Step 3: Instantiate Contract
 Create a new instance of the contrac using `tx wasm instantiate` command:
 ```bash
-babylond tx wasm instantiate $codeID '{}' \
---from=$key \
---no-admin \
---label="storage_contract" \
---gas=auto \
---gas-prices=0.002$feeToken \
---gas-adjustment=1.3 \
---chain-id="$chainId" \
+babylond tx wasm instantiate $codeID '{}' --from=$key --no-admin --label="storage_contract" --gas=auto --gas-prices=0.002$feeToken --gas-adjustment=1.3 --chain-id="$chainId" -b=sync --yes --keyring-backend=test --log_format=json --home=$homeDir --node=$nodeUrl
 -b=sync \
 --yes \
 --keyring-backend=test \
@@ -191,10 +169,7 @@ Parameters explained:
 
 Get the contract's address and store it in a variable:
 ```bash
-contractAddress=$(babylond query wasm list-contract-by-code $codeID \
---node=$nodeUrl \
--o json \
-| jq -r '.contracts[0]')
+contractAddress=$(babylond query wasm list-contract-by-code $codeID --node=$nodeUrl -o json | jq -r '.contracts[0]')
 ```
 
 ### 7. Contract Interaction
@@ -212,18 +187,7 @@ hexData=$(echo -n "$data" | xxd -ps -c0)
 executeMsg="{\"save_data\":{\"data\":\"$hexData\"}}"
 
 # Send transaction via `tx wasm execute` command
-babylond tx wasm execute $contractAddress "$executeMsg" \
---from=$key \
---gas=auto \
---gas-prices=0.002$feeToken \
---gas-adjustment=1.3 \
---chain-id="$chainId" \
--b=sync \
---yes \
---keyring-backend=test \
---log_format=json \
---home=$homeDir \
---node=$nodeUrl
+babylond tx wasm execute $contractAddress "$executeMsg" --from=$key --gas=auto --gas-prices=0.002$feeToken --gas-adjustment=1.3 --chain-id="$chainId" -b=sync --yes --keyring-backend=test --log_format=json --home=$homeDir --node=$nodeUrl
 ```
 
 #### Query Data
